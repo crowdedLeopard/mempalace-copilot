@@ -247,9 +247,14 @@ def cmd_benchmark(args):
 
 def cmd_copilot_setup(args):
     """Set up MemPalace for GitHub Copilot in VS Code."""
-    from .copilot import setup_copilot
+    if getattr(args, "global_install", False):
+        from .copilot import setup_copilot_global
 
-    setup_copilot(project_dir=args.dir, wing=args.wing)
+        setup_copilot_global(wing=args.wing)
+    else:
+        from .copilot import setup_copilot
+
+        setup_copilot(project_dir=args.dir, wing=args.wing)
 
 
 def cmd_copilot_instructions(args):
@@ -258,6 +263,13 @@ def cmd_copilot_instructions(args):
 
     path = write_copilot_instructions(project_dir=args.dir, wing=args.wing)
     print(f"  Updated: {path}")
+
+
+def cmd_install(args):
+    """One-time global install for VS Code."""
+    from .copilot import setup_copilot_global
+
+    setup_copilot_global(wing=args.wing)
 
 
 def cmd_compress(args):
@@ -500,6 +512,17 @@ def main():
         "dir", nargs="?", default=".", help="Project directory (default: current directory)"
     )
     p_copilot.add_argument("--wing", default=None, help="Wing for wake-up context (optional)")
+    p_copilot.add_argument(
+        "--global", dest="global_install", action="store_true",
+        help="Install globally in VS Code user settings (run once, works in every project)",
+    )
+
+    # install (alias for copilot-setup --global)
+    p_install = sub.add_parser(
+        "install",
+        help="One-time global install — adds MemPalace to VS Code user settings so it works in every project",
+    )
+    p_install.add_argument("--wing", default=None, help="Wing for wake-up context (optional)")
 
     # copilot-instructions
     p_copilot_inst = sub.add_parser(
@@ -554,6 +577,7 @@ def main():
         "repair": cmd_repair,
         "copilot-setup": cmd_copilot_setup,
         "copilot-instructions": cmd_copilot_instructions,
+        "install": cmd_install,
         "watch": cmd_watch,
         "benchmark": cmd_benchmark,
         "status": cmd_status,

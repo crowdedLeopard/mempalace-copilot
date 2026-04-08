@@ -26,23 +26,26 @@ What is untested or incomplete:
 
 ```
 pip install mempalace
+mempalace install
 ```
 
-### Set up for Copilot
+That's it. The `install` command runs once and adds MemPalace to your VS Code user settings globally. Every project you open gets the 19 MCP tools automatically. Reload VS Code after running it (Ctrl+Shift+P, "Reload Window").
+
+Then mine something so the palace has content:
+
+```
+mempalace mine ~/projects/myapp --wing myapp
+```
+
+### Per-project setup (alternative)
+
+If you prefer per-project config instead of global:
 
 ```
 mempalace copilot-setup
 ```
 
-That creates three files in your project:
-
-```
-.vscode/mcp.json                  -- registers MemPalace as an MCP server
-.github/copilot-instructions.md   -- loads memory protocol + palace context into Copilot
-.vscode/tasks.json                -- adds Save, Search, Status, Wake-up tasks
-```
-
-Reload VS Code after running this (Ctrl+Shift+P, "Reload Window").
+This creates `.vscode/mcp.json`, `.github/copilot-instructions.md`, and `.vscode/tasks.json` in the current project only.
 
 ### Mine your data
 
@@ -75,6 +78,7 @@ For full academic benchmarks (LongMemEval, LoCoMo, ConvoMem), see the `benchmark
 ## Commands
 
 ```
+mempalace install                     One-time global setup (adds MCP to VS Code user settings)
 mempalace init <dir>                  Guided onboarding + entity detection
 mempalace mine <dir>                  Mine project files into the palace
 mempalace mine <dir> --mode convos    Mine conversation exports (Claude, ChatGPT, Copilot, Slack)
@@ -84,7 +88,8 @@ mempalace wake-up                     Show L0 + L1 wake-up context
 mempalace status                      Palace overview
 mempalace benchmark                   Retrieval smoke test
 mempalace watch <dir>                 Background file watcher (auto-mines changes every 5 min)
-mempalace copilot-setup               Full Copilot setup (MCP + instructions + tasks)
+mempalace copilot-setup               Per-project Copilot setup (MCP + instructions + tasks)
+mempalace copilot-setup --global      Same as mempalace install
 mempalace copilot-instructions        Regenerate copilot-instructions.md with current palace context
 mempalace compress --wing app         AAAK compression (experimental)
 mempalace split <dir>                 Split concatenated chat transcripts

@@ -337,3 +337,128 @@ def setup_copilot(project_dir: str = ".", wing: str = None) -> dict:
     print(f"\n{'=' * 55}\n")
 
     return results
+
+
+# ============================================================
+# Global (user-level) setup — run once, works in every project
+# ============================================================
+
+
+def _get_vscode_user_settings_path() -> Path:
+    """Return the path to VS Code user settings.json."""
+    if sys.platform == "win32":
+        return Path(os.environ.get("APPDATA", "")) / "Code" / "User" / "settings.json"
+    elif sys.platform == "darwin":
+        return Path.home() / "Library" / "Application Support" / "Code" / "User" / "settings.json"
+    else:
+        return Path.home() / ".config" / "Code" / "User" / "settings.json"
+
+
+def _get_vscode_user_prompts_dir() -> Path:
+    """Return the VS Code user prompts directory."""
+    if sys.platform == "win32":
+        return Path(os.environ.get("APPDATA", "")) / "Code" / "User" / "prompts"
+    elif sys.platform == "darwin":
+        return Path.home() / "Library" / "Application Support" / "Code" / "User" / "prompts"
+    else:
+        return Path.home() / ".config" / "Code" / "User" / "prompts"
+
+
+def write_global_mcp_config() -> Path:
+    """Add MemPalace MCP server to VS Code user settings.json."""
+    settings_path = _get_vscode_user_settings_path()
+
+    if not settings_path.exists():
+        print(f"  Warning: VS Code settings not found at {settings_path}")
+        print("  Creating with MCP config only.")
+        settings = {}
+    else:
+        with open(settings_path, "r") as f:
+            content = f.read()
+        # Handle VS Code's settings.json which may have trailing commas and comments
+        # Strip single-line comments (but not :// in URLs)
+        import re
+        cleaned = re.sub(r'(?<!:)//.*$', '', content, flags=re.MULTILINE)
+        # Strip trailing commas before } or ]
+        cleaned = re.sub(r',(\s*[}\]])', r'\1', cleaned)
+        try:
+            settings = json.loads(cleaned)
+        except json.JSONDecodeError:
+            print(f"  Warning: Could not parse {settings_path}")
+            print("  Skipping user settings. Use --project instead for per-project setup.")
+            return settings_path
+
+    python_exe = get_python_executable()
+
+    # Add MCP server under "mcp" key (VS Code user-level MCP config)
+    if "mcp" not in settings:
+        settings["mcp"] = {}
+    if "servers" not in settings["mcp"]:
+        settings["mcp"]["servers"] = {}
+
+    settings["mcp"]["servers"]["mempalace"] = {
+        "type": "stdio",
+        "command": python_exe,
+        "args": ["-m", "mempalace.mcp_server"],
+    }
+
+    with open(settings_path, "w") as f:
+        json.dump(settings, f, indent=4)
+
+    return settings_path
+
+
+def write_global_copilot_instructions(wing: str = None) -> Path:
+    """Write MemPalace instructions to VS Code user prompts directory."""
+    prompts_dir = _get_vscode_user_prompts_dir()
+    prompts_dir.mkdir(parents=True, exist_ok=True)
+
+    instructions_file = prompts_dir / "mempalace.instructions.md"
+    content = generate_copilot_instructions(wing=wing)
+
+    instructions_file.write_text(content)
+    return instructions_file
+
+
+def setup_copilot_global(wing: str = None) -> dict:
+    """
+    Global Copilot setup — run once, works in every project.
+    Adds MCP server to VS Code user settings and instructions to user prompts.
+    """
+    results = {}
+
+    print(f"\n{'=' * 55}")
+    print("  MemPalace — Global Copilot Setup")
+    print(f"{'=' * 55}\n")
+
+    # 1. Palace init (ensure ~/.mempalace exists)
+    cfg = MempalaceConfig()
+    cfg.init()
+    print(f"  Palace:         {cfg.palace_path}")
+
+    # 2. MCP server in user settings
+    settings_path = write_global_mcp_config()
+    results["settings"] = str(settings_path)
+    print(f"  MCP config:     {settings_path}")
+
+    # 3. Instructions in user prompts
+    instructions_path = write_global_copilot_instructions(wing=wing)
+    results["instructions"] = str(instructions_path)
+    print(f"  Instructions:   {instructions_path}")
+
+    print(f"\n{'─' * 55}")
+    print("  Global setup complete! MemPalace is now available in every project.")
+    print()
+    print("  What happens next:")
+    print("    1. Reload VS Code (Ctrl+Shift+P → 'Reload Window')")
+    print("    2. Open any project — Copilot already has the 19 MCP tools")
+    print("    3. Start working. Copilot auto-saves decisions to the palace.")
+    print()
+    print("  To mine an existing project into the palace:")
+    print("    mempalace mine ~/projects/myapp --wing myapp")
+    print()
+    print("  To check what's in the palace:")
+    print("    mempalace status")
+    print(f"\n{'=' * 55}\n")
+
+    return results

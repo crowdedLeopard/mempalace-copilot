@@ -80,6 +80,28 @@ def generate_copilot_instructions(wing: str = None) -> str:
         "4. **WHEN FACTS CHANGE**: call `mempalace_kg_invalidate` on the old fact, `mempalace_kg_add` for the new one.",
         "5. **TO SAVE MEMORIES**: call `mempalace_add_drawer` with verbatim content organized into wings and rooms.",
         "",
+        "## Auto-Save Protocol",
+        "",
+        "You are responsible for saving important context to the palace during this session.",
+        "Follow these rules:",
+        "",
+        "- **AFTER EVERY SIGNIFICANT DECISION OR OUTCOME**: immediately call `mempalace_add_drawer`",
+        "  with the verbatim exchange. Use the project name as the wing and a descriptive slug as the room",
+        "  (e.g., wing=\"myapp\", room=\"auth-migration\").",
+        "- **EVERY 10-15 EXCHANGES**: call `mempalace_diary_write` with a compressed summary of the session",
+        "  so far. Include: topics discussed, decisions made, code changes, open questions.",
+        "  Use your agent name as the agent_name parameter.",
+        "- **BEFORE THE USER ENDS THE SESSION** (if they say goodbye, thanks, done, etc.):",
+        "  do a final save of any unsaved decisions, code changes, or important context.",
+        "- **WHAT TO SAVE** (always verbatim, never summarized):",
+        "  - Decisions: \"We chose X because Y\"",
+        "  - Architecture changes: \"Switched from X to Y\"",
+        "  - Debugging outcomes: \"The bug was caused by X, fixed by Y\"",
+        "  - Preferences expressed: \"Use tabs not spaces\", \"Prefer composition over inheritance\"",
+        "  - People and roles: \"Kai is handling the auth migration\"",
+        "- **WHAT NOT TO SAVE**: greetings, small talk, trivial clarifications, repeated information",
+        "  already in the palace (check with `mempalace_check_duplicate` if unsure).",
+        "",
         "## Key Tools",
         "",
         "- `mempalace_search` — Find anything by semantic search",
@@ -87,6 +109,7 @@ def generate_copilot_instructions(wing: str = None) -> str:
         "- `mempalace_add_drawer` — Store new memories (verbatim, never summarized)",
         "- `mempalace_status` — Palace overview with wing/room counts",
         "- `mempalace_diary_write` — Write session diary entries",
+        "- `mempalace_check_duplicate` — Check before filing to avoid duplicates",
         "",
     ]
 
@@ -201,6 +224,21 @@ def generate_vscode_tasks() -> dict:
                 },
                 "problemMatcher": [],
             },
+            {
+                "label": "MemPalace: Watch & Auto-Save",
+                "type": "shell",
+                "command": python_exe,
+                "args": ["-m", "mempalace", "watch", "${workspaceFolder}", "--interval", "300"],
+                "group": "none",
+                "isBackground": True,
+                "presentation": {
+                    "echo": True,
+                    "reveal": "silent",
+                    "focus": False,
+                    "panel": "dedicated",
+                },
+                "problemMatcher": [],
+            },
         ],
         "inputs": [
             {
@@ -291,6 +329,11 @@ def setup_copilot(project_dir: str = ".", wing: str = None) -> dict:
     print("    - MemPalace: Search")
     print("    - MemPalace: Status")
     print("    - MemPalace: Wake-up Context")
+    print("    - MemPalace: Watch & Auto-Save  (background — mines changes every 5 min)")
+    print()
+    print("  Auto-save is two-layer:")
+    print("    1. Copilot saves decisions/context via MCP tools (instruction-driven)")
+    print("    2. File watcher mines code changes (run the Watch task above)")
     print(f"\n{'=' * 55}\n")
 
     return results

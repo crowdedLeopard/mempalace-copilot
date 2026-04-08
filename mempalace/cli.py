@@ -226,6 +226,18 @@ def cmd_repair(args):
     print(f"\n{'=' * 55}\n")
 
 
+def cmd_watch(args):
+    """Watch a directory and auto-mine changes periodically."""
+    from .watcher import run_watcher
+
+    run_watcher(
+        project_dir=args.dir,
+        interval=args.interval,
+        wing=args.wing,
+        dry_run=args.dry_run,
+    )
+
+
 def cmd_benchmark(args):
     """Run retrieval smoke test to check for quality regression."""
     from .smoke_test import main as smoke_main
@@ -499,6 +511,21 @@ def main():
     )
     p_copilot_inst.add_argument("--wing", default=None, help="Wing for wake-up context (optional)")
 
+    # watch
+    p_watch = sub.add_parser(
+        "watch",
+        help="Watch a directory and auto-mine changes every N seconds (background auto-save)",
+    )
+    p_watch.add_argument("dir", help="Project directory to watch")
+    p_watch.add_argument(
+        "--interval", type=int, default=300,
+        help="Seconds between scans (default: 300 = 5 minutes)",
+    )
+    p_watch.add_argument("--wing", default=None, help="Wing name (default: directory name)")
+    p_watch.add_argument(
+        "--dry-run", action="store_true", help="Report changes without mining"
+    )
+
     # benchmark
     p_bench = sub.add_parser(
         "benchmark",
@@ -527,6 +554,7 @@ def main():
         "repair": cmd_repair,
         "copilot-setup": cmd_copilot_setup,
         "copilot-instructions": cmd_copilot_instructions,
+        "watch": cmd_watch,
         "benchmark": cmd_benchmark,
         "status": cmd_status,
     }

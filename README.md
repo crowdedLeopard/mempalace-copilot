@@ -13,12 +13,12 @@ This is an alpha. The Copilot integration layer is new. The underlying palace en
 What works:
 - MCP server with all 19 tools, discoverable by Copilot
 - One-command VS Code setup (mcp.json, copilot-instructions.md, tasks.json)
+- Two-layer auto-save: instruction-driven (Copilot saves via MCP) + file watcher (background task)
 - Copilot chat history parsing for mining
 - All existing MemPalace features (mining, search, knowledge graph, AAAK, etc.)
 - Retrieval smoke test for regression checking
 
 What is untested or incomplete:
-- Auto-save equivalent for Copilot (Claude Code has hooks; Copilot relies on manual saves or tasks)
 - Copilot chat export format parsing (the format isn't standardized yet)
 - Windows-specific edge cases in test cleanup (non-critical, see Known Issues)
 
@@ -83,6 +83,7 @@ mempalace search "query" --wing app   Search within a specific project
 mempalace wake-up                     Show L0 + L1 wake-up context
 mempalace status                      Palace overview
 mempalace benchmark                   Retrieval smoke test
+mempalace watch <dir>                 Background file watcher (auto-mines changes every 5 min)
 mempalace copilot-setup               Full Copilot setup (MCP + instructions + tasks)
 mempalace copilot-instructions        Regenerate copilot-instructions.md with current palace context
 mempalace compress --wing app         AAAK compression (experimental)
@@ -127,11 +128,31 @@ Agent Diary: `mempalace_diary_write`, `mempalace_diary_read`
 
 ## Saving Memories
 
-Copilot doesn't have auto-save hooks like Claude Code. Three options:
+Auto-save works in two layers:
 
-1. **Ask Copilot directly** -- "Save what we discussed about auth to the palace." Copilot calls `mempalace_add_drawer`.
-2. **VS Code Tasks** -- Ctrl+Shift+P, "Run Task", "MemPalace: Save Session".
-3. **CLI** -- `mempalace mine ~/projects/myapp`
+**Layer 1: Instruction-driven (Copilot saves via MCP tools)**
+
+The copilot-instructions.md includes an auto-save protocol that tells Copilot to:
+- Save decisions and outcomes immediately as they happen via `mempalace_add_drawer`
+- Write a diary summary every 10-15 exchanges via `mempalace_diary_write`
+- Do a final save when the session ends
+
+This happens automatically during normal conversation. Copilot uses the MCP tools it already has.
+
+**Layer 2: File watcher (mines code changes in background)**
+
+```
+mempalace watch ~/projects/myapp
+mempalace watch ~/projects/myapp --interval 120
+```
+
+Or run it as a VS Code background task: Ctrl+Shift+P, "Run Task", "MemPalace: Watch & Auto-Save". Scans the project every 5 minutes, mines new or modified files into the palace.
+
+**Manual options still work:**
+
+- Ask Copilot directly: "Save what we discussed about auth to the palace."
+- VS Code Task: "MemPalace: Save Session"
+- CLI: `mempalace mine ~/projects/myapp`
 
 ## Benchmarks
 
@@ -190,6 +211,7 @@ mempalace/
   cli.py              CLI entry point
   mcp_server.py       MCP server (19 tools)
   copilot.py          Copilot integration (MCP config, instructions, tasks)
+  watcher.py          Background file watcher for auto-save
   smoke_test.py       Retrieval regression test
   searcher.py         Semantic search via ChromaDB
   miner.py            Project file ingest

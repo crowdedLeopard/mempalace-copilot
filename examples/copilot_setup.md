@@ -119,25 +119,37 @@ Once configured, Copilot has access to all 19 MemPalace tools:
 
 ## Saving Memories
 
-Unlike Claude Code, Copilot doesn't have auto-save hooks. You have three options:
+MemPalace auto-save works in two layers:
 
-### Option 1: Ask Copilot to save (easiest)
+### Layer 1: Instruction-driven (automatic)
 
-Tell Copilot directly:
-> *"Save what we just discussed about the auth migration to the palace"*
+The generated `copilot-instructions.md` includes an auto-save protocol. Copilot will:
+- Save decisions and outcomes immediately via `mempalace_add_drawer`
+- Write a diary summary every 10-15 exchanges via `mempalace_diary_write`
+- Do a final save when the session ends (goodbye, thanks, done, etc.)
 
-Copilot will call `mempalace_add_drawer` with the right wing and room.
+This happens automatically. You don't need to ask Copilot to save — the instructions tell it when and what to save.
 
-### Option 2: VS Code Tasks
+### Layer 2: File watcher (background task)
 
-Run `Ctrl+Shift+P` → "Run Task" → "MemPalace: Save Session" to mine the current project.
+Start the watcher as a VS Code background task:
+- `Ctrl+Shift+P` → "Run Task" → "MemPalace: Watch & Auto-Save"
 
-### Option 3: CLI
-
+Or from the CLI:
 ```bash
-mempalace mine ~/projects/myapp
-mempalace mine ~/chats/ --mode convos
+mempalace watch ~/projects/myapp
+mempalace watch ~/projects/myapp --interval 120  # scan every 2 minutes
 ```
+
+The watcher scans for new or modified files every 5 minutes and mines them into the palace. It persists state between restarts so it only mines actual changes.
+
+### Manual saves
+
+You can still save manually:
+
+- Tell Copilot: *"Save what we discussed about auth to the palace"*
+- Run `Ctrl+Shift+P` → "Run Task" → "MemPalace: Save Session"
+- CLI: `mempalace mine ~/projects/myapp`
 
 ## Updating Instructions
 
@@ -154,7 +166,8 @@ mempalace copilot-instructions --wing myproject  # project-specific
 |---------|------------|-------------------|
 | MCP config | `claude mcp add mempalace` | `.vscode/mcp.json` |
 | Instructions | `CLAUDE.md` | `.github/copilot-instructions.md` |
-| Auto-save | Stop/PreCompact hooks | VS Code tasks or manual |
+| Auto-save (conversation) | Stop/PreCompact hooks (shell scripts) | Instruction-driven (AI saves via MCP tools) |
+| Auto-save (files) | Not built-in | File watcher background task |
 | Wake-up context | Injected via hooks | Loaded from instructions file |
 | Tool discovery | Automatic | Automatic (MCP protocol) |
 

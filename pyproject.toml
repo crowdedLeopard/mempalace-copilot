@@ -1,11 +1,12 @@
 [project]
-name = "mempalace"
-version = "3.0.0"
-description = "Give your AI a memory — mine projects and conversations into a searchable palace. No API key required."
+name = "mempalace-copilot"
+version = "0.1.0-alpha"
+description = "MemPalace fork optimized for GitHub Copilot in VS Code. Local AI memory with MCP integration, no API key required."
 readme = "README.md"
 requires-python = ">=3.9"
 license = "MIT"
 authors = [
+    {name = "crowdedLeopard"},
     {name = "milla-jovovich"},
 ]
 keywords = [
@@ -30,9 +31,10 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/milla-jovovich/mempalace"
-Repository = "https://github.com/milla-jovovich/mempalace"
-"Bug Tracker" = "https://github.com/milla-jovovich/mempalace/issues"
+Homepage = "https://github.com/crowdedLeopard/mempalace"
+Repository = "https://github.com/crowdedLeopard/mempalace"
+"Bug Tracker" = "https://github.com/crowdedLeopard/mempalace/issues"
+"Upstream" = "https://github.com/milla-jovovich/mempalace"
 
 [project.scripts]
 mempalace = "mempalace:main"

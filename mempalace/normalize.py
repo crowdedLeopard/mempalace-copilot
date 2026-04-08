@@ -60,12 +60,16 @@ def _try_normalize_json(content: str) -> Optional[str]:
     if normalized:
         return normalized
 
+    normalized = _try_copilot_jsonl(content)
+    if normalized:
+        return normalized
+
     try:
         data = json.loads(content)
     except json.JSONDecodeError:
         return None
 
-    for parser in (_try_claude_ai_json, _try_chatgpt_json, _try_slack_json):
+    for parser in (_try_claude_ai_json, _try_chatgpt_json, _try_slack_json, _try_copilot_json):
         normalized = parser(data)
         if normalized:
             return normalized
@@ -261,6 +265,134 @@ def _try_slack_json(data) -> Optional[str]:
         messages.append((seen_users[user_id], text))
     if len(messages) >= 2:
         return _messages_to_transcript(messages)
+    return None
+
+
+def _try_copilot_jsonl(content: str) -> Optional[str]:
+    """GitHub Copilot Chat JSONL export.
+
+    Copilot chat sessions may be stored as JSONL with entries containing
+    a 'role' field (user/assistant) and 'content' field, or as entries
+    with a 'type' field of 'request'/'response'.
+    """
+    lines = [line.strip() for line in content.strip().split("\n") if line.strip()]
+    messages = []
+    has_copilot_marker = False
+    for line in lines:
+        try:
+            entry = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(entry, dict):
+            continue
+
+        # Detect Copilot-specific markers
+        if entry.get("provider", "").startswith("copilot") or entry.get("agent") == "copilot":
+            has_copilot_marker = True
+
+        # Format 1: role + content fields
+        role = entry.get("role", "")
+        if role in ("user", "human"):
+            text = _extract_content(entry.get("content", ""))
+            if text:
+                messages.append(("user", text))
+                continue
+        elif role in ("assistant", "copilot"):
+            text = _extract_content(entry.get("content", ""))
+            if text:
+                messages.append(("assistant", text))
+                continue
+
+        # Format 2: type=request/response
+        entry_type = entry.get("type", "")
+        if entry_type == "request":
+            text = _extract_content(entry.get("message", entry.get("content", "")))
+            if text:
+                messages.append(("user", text))
+                has_copilot_marker = True
+        elif entry_type == "response":
+            text = _extract_content(entry.get("message", entry.get("content", "")))
+            if text:
+                messages.append(("assistant", text))
+                has_copilot_marker = True
+
+    if len(messages) >= 2 and has_copilot_marker:
+        return _messages_to_transcript(messages)
+    return None
+
+
+def _try_copilot_json(data) -> Optional[str]:
+    """GitHub Copilot Chat JSON export.
+
+    Handles VS Code Copilot chat history which may be exported as a JSON
+    array of conversation objects with 'requests' containing user/assistant turns,
+    or as a flat array of messages with role/content pairs.
+    """
+    if not isinstance(data, (list, dict)):
+        return None
+
+    # Format 1: Single conversation object with 'requests' array
+    if isinstance(data, dict):
+        requests = data.get("requests", data.get("turns", []))
+        if not isinstance(requests, list):
+            return None
+        messages = []
+        for req in requests:
+            if not isinstance(req, dict):
+                continue
+            # User message
+            user_text = _extract_content(req.get("message", req.get("prompt", "")))
+            if user_text:
+                messages.append(("user", user_text))
+            # Assistant response
+            response = req.get("response", req.get("result", {}))
+            if isinstance(response, dict):
+                assistant_text = _extract_content(response.get("message", response.get("value", "")))
+            elif isinstance(response, str):
+                assistant_text = response.strip()
+            else:
+                assistant_text = ""
+            if assistant_text:
+                messages.append(("assistant", assistant_text))
+        if len(messages) >= 2:
+            return _messages_to_transcript(messages)
+
+    # Format 2: Array of conversation objects
+    if isinstance(data, list):
+        all_messages = []
+        for convo in data:
+            if not isinstance(convo, dict):
+                continue
+            requests = convo.get("requests", convo.get("turns", []))
+            if not isinstance(requests, list):
+                # Try flat message format
+                role = convo.get("role", "")
+                content = _extract_content(convo.get("content", ""))
+                if role in ("user", "human") and content:
+                    all_messages.append(("user", content))
+                elif role in ("assistant", "copilot") and content:
+                    all_messages.append(("assistant", content))
+                continue
+            for req in requests:
+                if not isinstance(req, dict):
+                    continue
+                user_text = _extract_content(req.get("message", req.get("prompt", "")))
+                if user_text:
+                    all_messages.append(("user", user_text))
+                response = req.get("response", req.get("result", {}))
+                if isinstance(response, dict):
+                    assistant_text = _extract_content(
+                        response.get("message", response.get("value", ""))
+                    )
+                elif isinstance(response, str):
+                    assistant_text = response.strip()
+                else:
+                    assistant_text = ""
+                if assistant_text:
+                    all_messages.append(("assistant", assistant_text))
+        if len(all_messages) >= 2:
+            return _messages_to_transcript(all_messages)
+
     return None
 
 

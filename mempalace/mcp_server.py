@@ -1,8 +1,26 @@
 #!/usr/bin/env python3
 """
-MemPalace MCP Server — read/write palace access for Claude Code
-================================================================
-Install: claude mcp add mempalace -- python -m mempalace.mcp_server
+MemPalace MCP Server — read/write palace access for AI tools
+=============================================================
+
+Works with any MCP-compatible client:
+  - GitHub Copilot (VS Code): configure in .vscode/mcp.json
+  - Claude Code:              claude mcp add mempalace -- python -m mempalace.mcp_server
+  - Cursor, Gemini CLI, etc.
+
+Quick setup for GitHub Copilot:
+  mempalace copilot-setup
+
+Or manually add to .vscode/mcp.json:
+  {
+    "servers": {
+      "mempalace": {
+        "type": "stdio",
+        "command": "python",
+        "args": ["-m", "mempalace.mcp_server"]
+      }
+    }
+  }
 
 Tools (read):
   mempalace_status          — total drawers, wing/room breakdown

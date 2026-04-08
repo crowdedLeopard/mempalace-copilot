@@ -2,6 +2,10 @@
 
 These hook scripts make MemPalace save automatically. No manual "save" commands needed.
 
+> **Using GitHub Copilot in VS Code?** These hooks are for Claude Code and Codex CLI.
+> For Copilot, run `mempalace copilot-setup` instead — it configures MCP tools,
+> instructions, and VS Code tasks. See [examples/copilot_setup.md](../examples/copilot_setup.md).
+
 ## What They Do
 
 | Hook | When It Fires | What Happens |

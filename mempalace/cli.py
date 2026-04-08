@@ -226,6 +226,28 @@ def cmd_repair(args):
     print(f"\n{'=' * 55}\n")
 
 
+def cmd_benchmark(args):
+    """Run retrieval smoke test to check for quality regression."""
+    from .smoke_test import main as smoke_main
+
+    smoke_main()
+
+
+def cmd_copilot_setup(args):
+    """Set up MemPalace for GitHub Copilot in VS Code."""
+    from .copilot import setup_copilot
+
+    setup_copilot(project_dir=args.dir, wing=args.wing)
+
+
+def cmd_copilot_instructions(args):
+    """Regenerate copilot-instructions.md with current palace context."""
+    from .copilot import write_copilot_instructions
+
+    path = write_copilot_instructions(project_dir=args.dir, wing=args.wing)
+    print(f"  Updated: {path}")
+
+
 def cmd_compress(args):
     """Compress drawers in a wing using AAAK Dialect."""
     import chromadb
@@ -457,6 +479,35 @@ def main():
         help="Rebuild palace vector index from stored data (fixes segfaults after corruption)",
     )
 
+    # copilot-setup
+    p_copilot = sub.add_parser(
+        "copilot-setup",
+        help="Set up MemPalace for GitHub Copilot in VS Code (MCP config + instructions + tasks)",
+    )
+    p_copilot.add_argument(
+        "dir", nargs="?", default=".", help="Project directory (default: current directory)"
+    )
+    p_copilot.add_argument("--wing", default=None, help="Wing for wake-up context (optional)")
+
+    # copilot-instructions
+    p_copilot_inst = sub.add_parser(
+        "copilot-instructions",
+        help="Regenerate copilot-instructions.md with current palace context",
+    )
+    p_copilot_inst.add_argument(
+        "dir", nargs="?", default=".", help="Project directory (default: current directory)"
+    )
+    p_copilot_inst.add_argument("--wing", default=None, help="Wing for wake-up context (optional)")
+
+    # benchmark
+    p_bench = sub.add_parser(
+        "benchmark",
+        help="Run retrieval smoke test to check for quality regression (no downloads needed)",
+    )
+    p_bench.add_argument(
+        "--verbose", "-v", action="store_true", help="Show detailed per-query results"
+    )
+
     # status
     sub.add_parser("status", help="Show what's been filed")
 
@@ -474,6 +525,9 @@ def main():
         "compress": cmd_compress,
         "wake-up": cmd_wakeup,
         "repair": cmd_repair,
+        "copilot-setup": cmd_copilot_setup,
+        "copilot-instructions": cmd_copilot_instructions,
+        "benchmark": cmd_benchmark,
         "status": cmd_status,
     }
     dispatch[args.command](args)

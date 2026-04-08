@@ -1,26 +1,44 @@
 # mempalace-copilot
 
-**Alpha** -- Fork of [MemPalace](https://github.com/milla-jovovich/mempalace) optimized for GitHub Copilot in VS Code.
+**UNTESTED ALPHA -- USE AT YOUR OWN RISK**
+
+Fork of [MemPalace](https://github.com/milla-jovovich/mempalace) optimized for GitHub Copilot in VS Code.
+
+This has not been tested in production. The Copilot integration layer (auto-save,
+instruction-driven memory protocol, global install, file watcher) is brand new and
+unverified beyond basic smoke tests. The upstream palace engine (ChromaDB storage,
+semantic search, knowledge graph) is more mature but still beta.
+
+Do not rely on this for anything critical. Back up your data. File issues if
+something breaks.
+
+---
 
 MemPalace stores every AI conversation you have locally on your machine, organizes it into a searchable structure, and gives your AI tools access to it via MCP. This fork adds first-class GitHub Copilot support: one command generates the VS Code config, Copilot instructions, and tasks you need.
 
 The core retrieval engine is unchanged from upstream. 96.6% Recall@5 on LongMemEval, zero API calls, everything local.
 
-## Status
+## Status: Alpha
 
-This is an alpha. The Copilot integration layer is new. The underlying palace engine (ChromaDB storage, semantic search, knowledge graph) is stable upstream code. Expect rough edges in the Copilot-specific tooling.
+This is an untested alpha. Expect things to break.
 
-What works:
+What exists and has had basic smoke testing:
 - MCP server with all 19 tools, discoverable by Copilot
-- One-command VS Code setup (mcp.json, copilot-instructions.md, tasks.json)
-- Two-layer auto-save: instruction-driven (Copilot saves via MCP) + file watcher (background task)
+- One-command global VS Code setup (mempalace install)
+- Per-project setup (mempalace copilot-setup)
+- Two-layer auto-save: instruction-driven (Copilot saves via MCP) + file watcher
 - Copilot chat history parsing for mining
 - All existing MemPalace features (mining, search, knowledge graph, AAAK, etc.)
-- Retrieval smoke test for regression checking
+- Retrieval smoke test (mempalace benchmark)
 
-What is untested or incomplete:
-- Copilot chat export format parsing (the format isn't standardized yet)
-- Windows-specific edge cases in test cleanup (non-critical, see Known Issues)
+What has NOT been tested:
+- Real-world multi-project use over time
+- Auto-save protocol reliability (does Copilot consistently follow the instructions?)
+- Wing isolation under heavy use (cross-project contamination)
+- Copilot chat export format parsing (the format isn't standardized)
+- Large palaces (thousands of sessions, millions of tokens)
+- macOS and Linux (developed and tested on Windows only)
+- Concurrent access (multiple VS Code windows hitting the same palace)
 
 ## Quick Start
 
@@ -205,9 +223,16 @@ No API key. No internet after install. Everything local.
 
 ## Known Issues
 
+This is an untested alpha. The following are known problems:
+
 - Two test files (`test_miner.py`, `test_convo_miner.py`) fail on Windows during temp directory cleanup. This is a ChromaDB file lock issue on Windows, not a functional problem. The actual mining and search operations complete successfully.
 - AAAK compression is experimental and currently regresses retrieval quality (84.2% vs 96.6% raw). Use raw mode (the default) for best results.
 - Copilot chat export format is not yet standardized. The parser handles several known formats but may need updates.
+- The auto-save protocol depends on Copilot following the instructions in copilot-instructions.md. There is no guarantee Copilot will consistently call the save tools. Verify important saves manually.
+- The global install modifies your VS Code user settings.json. If something goes wrong, remove the "mempalace" entry from the "mcp"."servers" block in that file.
+- The file watcher (mempalace watch) uses polling, not filesystem events. On very large projects this may use noticeable CPU.
+- Only tested on Windows with Python 3.11. macOS and Linux should work but are unverified.
+- ChromaDB telemetry errors in output ("Failed to send telemetry event") are cosmetic and harmless.
 
 ## Project Structure
 
